@@ -1,13 +1,14 @@
-# csc_picker 
-![version](https://img.shields.io/badge/version-0.2.6-blue.svg)  ![version](https://img.shields.io/badge/NullSefety-True-brightgreen) 
+# csc_picker_v2
+
+![version](https://img.shields.io/badge/version-0.2.6-blue.svg) ![version](https://img.shields.io/badge/NullSefety-True-brightgreen)
 
 A flutter package to display a country, states, and cities. In addition it gives the possibility to select a list of countries, States and Cities depends on Selected, also you can search country, state, and city all around the world.
 
 <div style="text-align:center">
 <table>
 <tr>
-<td><img src="https://github.com/altafc22/csc_picker/blob/master/screenshot/horizontal_layout.gif?raw=true" alt="Horizontal Layout" width="240"/></td>
-<td><img src="https://github.com/altafc22/csc_picker/blob/master/screenshot/vertical_layout.gif?raw=true"  alt="Vertical Layout" width="240"/></td>
+<td><img src="https://github.com/hayatkhan67/csc_picker/blob/master/screenshot/horizontal_layout.gif?raw=true" alt="Horizontal Layout" width="240"/></td>
+<td><img src="https://github.com/hayatkhan/csc_picker/blob/master/screenshot/vertical_layout.gif?raw=true"  alt="Vertical Layout" width="240"/></td>
 
 </tr>
 </table>
@@ -15,7 +16,7 @@ A flutter package to display a country, states, and cities. In addition it gives
 
 ## How to Use
 
-To use this Package, add `csc_picker` as a [dependency in your pubspec.yaml](https://flutter.io/platform-plugins/).
+To use this Package, add `csc_picker_v2` as a [dependency in your pubspec.yaml](https://flutter.io/platform-plugins/).
 
 ```dart
       	CSCPicker(
@@ -36,6 +37,7 @@ To use this Package, add `csc_picker` as a [dependency in your pubspec.yaml](htt
       		},
           ),
 ```
+
 you will get feedback in onChanged functions
 
 ### Parameters
@@ -68,7 +70,7 @@ you will get feedback in onChanged functions
 ### Example
 
 ```dart
-import 'package:csc_picker/csc_picker.dart';
+import 'package:csc_picker_v2/csc_picker.dart';
 import 'package:flutter/material.dart';
 
 /// This is a implementation of the Country State City Picker.
@@ -232,5 +234,6 @@ class _MyHomePageState extends State<MyHomePage> {
 ```
 
 ### Special Thanks to
+
 - Okoh Emmanuel, country_state_city_picker [country_state_city_picker](https://github.com/prof22/country_state_city_picker)
 - Darshan Gada, countries-states-cities-database [countries-states-cities-database](https://github.com/dr5hn/countries-states-cities-database)

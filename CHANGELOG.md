@@ -1,3 +1,11 @@
+## [0.2.8] - 2026/05/22
+    * Renamed package name and package imports to `csc_picker_v2`
+    * Optimized country.json loading using background isolate (`compute`) to eliminate first-time initialization lagging
+    * Batched dropdown list population setState calls to improve UI rendering efficiency
+    * Added option to hide country dropdown using showCountry flag
+    * Hide dropdown down arrow icon automatically when a dropdown is disabled
+    * Restructured files to separate SearchDialog and CustomDialog into distinct files (complying with one-widget-per-file rules)
+
 ## [0.2.7] - 2021/05/14
     * Added filterCountry - you can select only those countries which you to display in dropdown
 

@@ -1,11 +1,11 @@
 {
   "roots": [
-    "csc_picker"
+    "csc_picker_v2"
   ],
   "packages": [
     {
-      "name": "csc_picker",
-      "version": "0.2.7",
+      "name": "csc_picker_v2",
+      "version": "0.2.8",
       "dependencies": [
         "flutter"
       ],

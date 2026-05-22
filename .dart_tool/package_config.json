@@ -146,7 +146,7 @@
       "languageVersion": "3.5"
     },
     {
-      "name": "csc_picker",
+      "name": "csc_picker_v2",
       "rootUri": "../",
       "packageUri": "lib/",
       "languageVersion": "2.12"
