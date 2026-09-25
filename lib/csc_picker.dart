@@ -645,6 +645,7 @@ class CSCPickerState extends State<CSCPicker> {
           }
         }
         
+        if (!mounted) return;
         setState(() => _selectedCountry = matchedCountry ?? widget.currentCountry);
         await getStates();
       } catch (e) {
@@ -660,6 +661,7 @@ class CSCPickerState extends State<CSCPicker> {
           break;
         }
       }
+      if (!mounted) return;
       setState(() => _selectedState = matchedState ?? widget.currentState!);
       await getCities();
     }
@@ -672,6 +674,7 @@ class CSCPickerState extends State<CSCPicker> {
           break;
         }
       }
+      if (!mounted) return;
       setState(() => _selectedCity = matchedCity ?? widget.currentCity!);
     }
   }
