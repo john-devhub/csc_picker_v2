@@ -20,7 +20,11 @@ class Country {
       this.frenchname,
       this.countrycode});
 
-  Country.fromJson(Map<String, dynamic> json) {
+  /// [parseStates] lets callers skip building the (expensive, deeply
+  /// nested) state/city tree for countries they don't currently need —
+  /// most of the cost of parsing the worldwide dataset is here, not in
+  /// decoding the raw JSON itself.
+  Country.fromJson(Map<String, dynamic> json, {bool parseStates = true}) {
     id = json['id'];
     name = json['name'];
     emoji = json['emoji'];
@@ -29,7 +33,7 @@ class Country {
     iso3 = json['iso3'];
     countrycode = json['countrycode'];
     frenchname = json['frenchname'];
-    if (json['state'] != null) {
+    if (parseStates && json['state'] != null) {
       state = [];
       json['state'].forEach((v) {
         state!.add(new Region.fromJson(v));

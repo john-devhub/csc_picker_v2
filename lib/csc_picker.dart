@@ -551,11 +551,18 @@ class CSCPicker extends StatefulWidget {
     this.cityDropdownLabel = "City",
     this.countryFilter,
     this.selectedItemPadding,
+    this.onLoadingChanged,
   }) : super(key: key);
 
   final ValueChanged<String>? onCountryChanged;
   final ValueChanged<String?>? onStateChanged;
   final ValueChanged<String?>? onCityChanged;
+
+  /// Called with `true` while the (large, worldwide) country/state/city
+  /// dataset is being loaded and parsed for the first time, and `false`
+  /// once it's ready — lets the host show a loading indicator instead of
+  /// static-looking, silently-disabled dropdowns.
+  final ValueChanged<bool>? onLoadingChanged;
 
   final String? currentCountry;
   final String? currentState;
@@ -601,6 +608,15 @@ class CSCPickerState extends State<CSCPicker> {
   String _selectedState = 'State';
 
   static List<Country>? _cachedCountries;
+  // Raw decoded JSON, kept alongside the typed cache so a country whose
+  // state/city tree was skipped during the fast initial parse (see
+  // _ensureStatesParsed) can be fully parsed on demand without re-reading
+  // or re-decoding the whole (several-MB) asset.
+  static List<dynamic>? _rawCountryJson;
+  // In-flight load, shared so concurrent callers (setDefaults + getCountries
+  // both call _getCountryModels without awaiting each other) don't each
+  // kick off their own asset read + isolate parse of the multi-MB dataset.
+  static Future<_ParsedCountries>? _loadingCountries;
 
   bool _isInitialized = false;
 
@@ -619,8 +635,17 @@ class CSCPickerState extends State<CSCPicker> {
     super.didChangeDependencies();
     if (!_isInitialized) {
       _isInitialized = true;
-      setDefaults();
-      getCountries();
+      _loadInitialData();
+    }
+  }
+
+  Future<void> _loadInitialData() async {
+    final alreadyLoaded = _cachedCountries != null;
+    if (!alreadyLoaded) widget.onLoadingChanged?.call(true);
+    try {
+      await Future.wait([setDefaults(), getCountries()]);
+    } finally {
+      if (!alreadyLoaded) widget.onLoadingChanged?.call(false);
     }
   }
 
@@ -701,18 +726,39 @@ class CSCPickerState extends State<CSCPicker> {
     if (_cachedCountries != null) {
       return _cachedCountries!;
     }
+    _loadingCountries ??= _loadCountryModels();
+    final result = await _loadingCountries!;
+    _cachedCountries = result.countries;
+    _rawCountryJson = result.raw;
+    return _cachedCountries!;
+  }
+
+  Future<_ParsedCountries> _loadCountryModels() async {
     var res = await DefaultAssetBundle.of(context)
         .loadString('packages/csc_picker_v2/lib/assets/country.json');
-    
+
     final bindingStr = (WidgetsBinding.instance as dynamic)?.runtimeType.toString() ?? '';
     final isTest = bindingStr.contains('Test');
-    if (isTest) {
-      _cachedCountries = _parseCountries(res);
-    } else {
-      _cachedCountries = await compute(_parseCountries, res);
+    final args = _ParseCountriesArgs(res, widget.currentCountry);
+    return isTest ? _parseCountries(args) : await compute(_parseCountries, args);
+  }
+
+  // Countries other than the one the host asked for (via `currentCountry`)
+  // are parsed without their state/city tree during the initial load, since
+  // building that tree for all ~250 countries is what makes the worldwide
+  // dataset slow to parse. If one of those countries is later selected,
+  // fill its state/city tree in from the cached raw JSON on demand.
+  void _ensureStatesParsed(Country country) {
+    if (country.state != null) return;
+    final raw = _rawCountryJson;
+    if (raw == null) return;
+    for (final item in raw) {
+      final map = item as Map<String, dynamic>;
+      if (map['name'] == country.name) {
+        country.state = Country.fromJson(map, parseStates: true).state;
+        break;
+      }
     }
-    
-    return _cachedCountries!;
   }
 
   ///get countries from json response
@@ -780,6 +826,10 @@ class CSCPickerState extends State<CSCPicker> {
       }
     }
 
+    if (targetCountry != null) {
+      _ensureStatesParsed(targetCountry);
+    }
+
     if (targetCountry != null && targetCountry.state != null) {
       if (!mounted) return _states;
       final List<String> tempStates = [];
@@ -812,6 +862,10 @@ class CSCPickerState extends State<CSCPicker> {
         targetCountry = country;
         break;
       }
+    }
+
+    if (targetCountry != null) {
+      _ensureStatesParsed(targetCountry);
     }
 
     if (targetCountry != null && targetCountry.state != null) {
@@ -1071,9 +1125,47 @@ class CSCPickerState extends State<CSCPicker> {
   }
 }
 
-/// Top-level helper function to parse countries list on a background isolate
-List<Country> _parseCountries(String jsonString) {
-  final decoded = jsonDecode(jsonString) as List;
-  return decoded.map((map) => Country.fromJson(map)).toList();
+/// Arguments for [_parseCountries], bundled so it can still be used as a
+/// single-argument top-level function (required by `compute`).
+class _ParseCountriesArgs {
+  const _ParseCountriesArgs(this.jsonString, this.targetCountryName);
+
+  final String jsonString;
+  final String? targetCountryName;
+}
+
+class _ParsedCountries {
+  const _ParsedCountries(this.countries, this.raw);
+
+  final List<Country> countries;
+  final List<dynamic> raw;
+}
+
+String? _normalizeCountryName(String? value) {
+  if (value == null) return null;
+  // Strips a leading flag emoji (and the padding after it) so a
+  // `currentCountry` passed with `CountryFlag.ENABLE` still matches the
+  // plain-text `name` field in the JSON dataset.
+  return value.replaceAll(RegExp(r'[^\x00-\x7F]'), '').trim().toLowerCase();
+}
+
+/// Top-level helper function to parse countries list on a background isolate.
+///
+/// Building the full state/city tree for every one of the ~250 countries in
+/// the dataset is the expensive part of this parse. Most hosts only ever
+/// need one country (named by [_ParseCountriesArgs.targetCountryName]), so
+/// that tree is only built eagerly for the matching country; other
+/// countries get a lightweight entry and are filled in on demand later (see
+/// `CSCPickerState._ensureStatesParsed`) if they're ever actually selected.
+_ParsedCountries _parseCountries(_ParseCountriesArgs args) {
+  final decoded = jsonDecode(args.jsonString) as List;
+  final target = _normalizeCountryName(args.targetCountryName);
+  final countries = decoded.map((map) {
+    final data = map as Map<String, dynamic>;
+    final parseStates =
+        target == null || _normalizeCountryName(data['name'] as String?) == target;
+    return Country.fromJson(data, parseStates: parseStates);
+  }).toList();
+  return _ParsedCountries(countries, decoded);
 }
 
